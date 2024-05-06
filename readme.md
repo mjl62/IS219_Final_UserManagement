@@ -1,6 +1,13 @@
+# IS 219 Final Project Spring 2024 - Matthew LiDonni
 
 
-# The User Management System Final Project: Your Epic Coding Adventure Awaits! 🎉✨🔥
+
+
+
+# Everything below this point is the rubric/instructions given
+
+
+## The User Management System Final Project: Your Epic Coding Adventure Awaits! 🎉✨🔥
 
 ## Introduction: Buckle Up for the Ride of a Lifetime 🚀🎬
 
