@@ -21,7 +21,7 @@ Key Highlights:
 from builtins import dict, int, len, str
 from datetime import timedelta
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Response, status, Request
+from fastapi import APIRouter, Depends, HTTPException, Response, status, Request, UploadFile
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies import get_current_user, get_db, get_email_service, require_role
@@ -245,3 +245,16 @@ async def verify_email(user_id: UUID, token: str, db: AsyncSession = Depends(get
     if await UserService.verify_email_with_token(db, user_id, token):
         return {"message": "Email verified successfully"}
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification token")
+
+
+@router.post("/profile-picture/{user_id}", status_code=status.HTTP_200_OK, name="upload_profile_picture", tags=["Profile Management"])
+async def upload_profile_picture(user_id: UUID, image: UploadFile, db: AsyncSession = Depends(get_db)):
+    """
+    User uploaded images for their profile picture
+    - **user_id**: UUID of the user to verify.
+    - **image**: Image to be the new profile picture.
+    """
+
+    # TODO Add profile picture upload process
+
+    return {"message": "Image uploaded successfully"}
