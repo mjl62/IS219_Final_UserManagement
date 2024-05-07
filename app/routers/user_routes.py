@@ -255,6 +255,9 @@ async def upload_profile_picture(user_id: UUID, image: UploadFile, db: AsyncSess
     - **image**: Image to be the new profile picture.
     """
 
+    if image.content_type != "image/jpeg" and image.content_type != "image/png" and image.content_type != "image/gif":
+        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=f"Does not accept file type: {image.content_type}")
+
     # TODO Add profile picture upload process
 
     return {"message": "Image uploaded successfully"}
