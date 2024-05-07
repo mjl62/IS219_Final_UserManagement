@@ -1,0 +1,83 @@
+/* styles.css */
+
+/* Resetting default margin and padding */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-size: 28px;
+}
+
+/* Body styles */
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    background-color: #f4f4f4;
+    color: #333;
+    margin: 0;
+    padding: 0;
+}
+
+/* Header styles */
+header {
+    background-color: #433244;
+    color: #fff;
+    padding: 1rem;
+    text-align: center;
+}
+
+header h1 {
+    margin-bottom: 0.5rem;
+}
+
+nav ul {
+    list-style-type: none;
+}
+
+nav ul li {
+    display: inline;
+    margin-right: 1rem;
+}
+
+nav ul li a {
+    color: #fff;
+    text-decoration: none;
+}
+
+/* Main styles */
+main {
+    padding: 2rem;
+}
+
+div {
+    display: grid;  
+}
+
+h3 {
+    text-align: center;
+    padding-bottom: 2%;
+}
+
+form {
+    margin: 0 auto;
+}
+
+form > input, form > button {
+    float: right;
+}
+
+/* Button styles */
+button {
+    padding: 0.5rem 1rem;
+    background-color: #433244;
+    color: #fff;
+    border: none;
+    font-size: 32px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin: .5em;
+}
+
+button:hover {
+    background-color: #5b455c;
+}
