@@ -1,6 +1,7 @@
 from builtins import str
 import pytest
 from httpx import AsyncClient
+from PIL import Image # For profile picture upload tests
 from app.main import app
 from app.models.user_model import User, UserRole
 from app.utils.nickname_gen import generate_nickname
@@ -190,3 +191,27 @@ async def test_list_users_unauthorized(async_client, user_token):
         headers={"Authorization": f"Bearer {user_token}"}
     )
     assert response.status_code == 403  # Forbidden, as expected for regular user
+
+@pytest.mark.asyncio
+async def test_upload_profile_picture(async_client, verified_user, user_token):
+    test_image_path = "tests/testing_files/BlankAvatar.png"
+    with open(test_image_path, "rb") as f:
+        response = await async_client.post(
+            f"/profile-picture/{verified_user.id}",
+            files={"image": f},
+            headers={"Authorization": f"Bearer {user_token}"}
+    )
+    assert response.status_code == 200
+
+@pytest.mark.asyncio
+async def test_upload_bad_image_type(async_client, verified_user, user_token):
+    test_file_path = "tests/testing_files/testdoc.txt"
+    with open(test_file_path, "rb") as f:
+        response = await async_client.post(
+            f"/profile-picture/{verified_user.id}",
+            files={"image": f}, 
+            headers={"Authorization": f"Bearer {user_token}"}
+    )
+    assert response.status_code == 415
+
+

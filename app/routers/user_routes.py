@@ -21,7 +21,7 @@ Key Highlights:
 from builtins import dict, int, len, str
 from datetime import timedelta
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Response, status, Request
+from fastapi import APIRouter, Depends, HTTPException, Response, status, Request, UploadFile
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies import get_current_user, get_db, get_email_service, require_role
@@ -30,9 +30,11 @@ from app.schemas.token_schema import TokenResponse
 from app.schemas.user_schemas import LoginRequest, UserBase, UserCreate, UserListResponse, UserResponse, UserUpdate
 from app.services.user_service import UserService
 from app.services.jwt_service import create_access_token
+from app.utils.image_handling import ImageHandler
 from app.utils.link_generation import create_user_links, generate_pagination_links
 from app.dependencies import get_settings
 from app.services.email_service import EmailService
+import os
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 settings = get_settings()
@@ -245,3 +247,57 @@ async def verify_email(user_id: UUID, token: str, db: AsyncSession = Depends(get
     if await UserService.verify_email_with_token(db, user_id, token):
         return {"message": "Email verified successfully"}
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification token")
+
+
+@router.post("/profile-picture/{user_id}", status_code=status.HTTP_200_OK, name="upload_profile_picture", tags=["Profile Management"])
+async def get_profile_picture(user_id: UUID, image: UploadFile, db: AsyncSession = Depends(get_db)):
+    """
+    User uploaded images for their profile picture
+    - **user_id**: UUID of the user to verify.
+    - **image**: Image to be the new profile picture.
+    """
+    if image.content_type != "image/jpeg" and image.content_type != "image/png" and image.content_type != "image/gif":
+        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=f"Does not accept file type: {image.content_type}")
+    
+    # temporarily store image
+    try:
+        with open(f"tmp/{user_id}.png", "wb") as f:
+            f.write(await image.read())
+            f.close()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Unknown issue with image handling: {e}")
+    
+    uploaded = ImageHandler.upload_file(f"tmp/{user_id}.png", f"{user_id}.png") # Upload image to MinIO
+    
+
+
+    if not uploaded:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Image upload service failure. Try again later or contact an admin.")
+    else:
+        return {"Successfully uploaded image"}
+
+
+@router.post("/profile-picture/{user_id}", status_code=status.HTTP_200_OK, name="upload_profile_picture", tags=["Profile Management"])
+async def upload_profile_picture(user_id: UUID, image: UploadFile, db: AsyncSession = Depends(get_db)):
+    """
+    User uploaded images for their profile picture
+    - **user_id**: UUID of the user to verify.
+    - **image**: Image to be the new profile picture.
+    """
+    if image.content_type != "image/jpeg" and image.content_type != "image/png" and image.content_type != "image/gif":
+        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=f"Does not accept file type: {image.content_type}")
+        
+    # temporarily store image
+    tmp = ImageHandler.save_temp_file(image=image, filename=f"{user_id}.png")
+
+    if not tmp:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Issue with image handling.")
+    
+    uploaded = ImageHandler.upload_file(f"tmp/{tmp}", tmp) # Upload image to MinIO
+    
+    ImageHandler.delete_temp_file(f"{user_id}.png")
+
+    if not uploaded:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Image upload service failure. Try again later or contact an admin.")
+    else:
+        return {"Successfully uploaded image"}

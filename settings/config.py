@@ -41,6 +41,13 @@ class Settings(BaseSettings):
     smtp_username: str = Field(default='your-mailtrap-username', description="Username for SMTP server")
     smtp_password: str = Field(default='your-mailtrap-password', description="Password for SMTP server")
 
+    # MinIO configuration, can be configured at localhost:9001 and then assigned in .env
+    # Login with user: minioadmin and password: minioadmin, can be changed in docker-compose.yml
+    minio_endpoint: str = Field(default="localhost", description="Endpoint for MinIO container")
+    minio_access_key: str = Field(default="accesskey", description="Access key for MinIO")
+    minio_secret_key: str = Field(default="secretkey", description="Secret key for MinIO")
+    minio_bucket_name: str = Field(default="mybucket", description="Bucket Name for MinIO")
+
 
     class Config:
         # If your .env file is not in the root directory, adjust the path accordingly.
