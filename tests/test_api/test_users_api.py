@@ -194,7 +194,7 @@ async def test_list_users_unauthorized(async_client, user_token):
 
 @pytest.mark.asyncio
 async def test_upload_profile_picture(async_client, verified_user, user_token):
-    test_image_path = "tests/test_api/testing_files/BlankAvatar.png"
+    test_image_path = "tests/testing_files/BlankAvatar.png"
     with open(test_image_path, "rb") as f:
         response = await async_client.post(
             f"/profile-picture/{verified_user.id}",
@@ -205,7 +205,7 @@ async def test_upload_profile_picture(async_client, verified_user, user_token):
 
 @pytest.mark.asyncio
 async def test_upload_bad_image_type(async_client, verified_user, user_token):
-    test_file_path = "tests/test_api/testing_files/testdoc.txt"
+    test_file_path = "tests/testing_files/testdoc.txt"
     with open(test_file_path, "rb") as f:
         response = await async_client.post(
             f"/profile-picture/{verified_user.id}",

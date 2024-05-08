@@ -7,4 +7,4 @@ qr_codes
 .env
 .coverage
 minio
-tmp
+tmp/*

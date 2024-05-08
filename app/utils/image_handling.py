@@ -1,6 +1,8 @@
 from minio import Minio
 from minio.error import S3Error
+from fastapi import UploadFile
 import logging
+import os
 from app.dependencies import get_settings
 
 settings = get_settings()
@@ -37,3 +39,25 @@ class ImageHandler:
         except S3Error as e:
             logger.error(f"MinIO Error: {e}")
             return False
+        
+    @staticmethod
+    async def save_temp_file(image: UploadFile, filename: str):
+        try:
+            with open(f"tmp/{filename}", "wb") as f:
+                f.write(await image.read())
+                f.close()
+                return f"tmp/{filename}"
+        except Exception as e:
+            return False
+    
+    @staticmethod
+    def delete_temp_file(filename: str):
+        if os.path.exists(f"tmp/{filename}"):
+            os.remove(f"tmp/{filename}")
+            return True
+        else:
+            raise FileNotFoundError
+        
+    @staticmethod
+    def delete_all_temp_files():
+        """ ONLY USE IF YOU HAVE TO, CAN CAUSE ISSUES OTHERWISE """

@@ -34,6 +34,7 @@ from app.utils.image_handling import ImageHandler
 from app.utils.link_generation import create_user_links, generate_pagination_links
 from app.dependencies import get_settings
 from app.services.email_service import EmailService
+import os
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 settings = get_settings()
@@ -268,6 +269,8 @@ async def get_profile_picture(user_id: UUID, image: UploadFile, db: AsyncSession
     
     uploaded = ImageHandler.upload_file(f"tmp/{user_id}.png", f"{user_id}.png") # Upload image to MinIO
     
+
+
     if not uploaded:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Image upload service failure. Try again later or contact an admin.")
     else:
@@ -283,17 +286,17 @@ async def upload_profile_picture(user_id: UUID, image: UploadFile, db: AsyncSess
     """
     if image.content_type != "image/jpeg" and image.content_type != "image/png" and image.content_type != "image/gif":
         raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=f"Does not accept file type: {image.content_type}")
-    
+        
     # temporarily store image
-    try:
-        with open(f"tmp/{user_id}.png", "wb") as f:
-            f.write(await image.read())
-            f.close()
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Unknown issue with image handling: {e}")
+    tmp = ImageHandler.save_temp_file(image=image, filename=f"{user_id}.png")
+
+    if not tmp:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Issue with image handling.")
     
-    uploaded = ImageHandler.upload_file(f"tmp/{user_id}.png", f"{user_id}.png") # Upload image to MinIO
+    uploaded = ImageHandler.upload_file(f"tmp/{tmp}", tmp) # Upload image to MinIO
     
+    ImageHandler.delete_temp_file(f"{user_id}.png")
+
     if not uploaded:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Image upload service failure. Try again later or contact an admin.")
     else:
