@@ -30,6 +30,7 @@ from app.schemas.token_schema import TokenResponse
 from app.schemas.user_schemas import LoginRequest, UserBase, UserCreate, UserListResponse, UserResponse, UserUpdate
 from app.services.user_service import UserService
 from app.services.jwt_service import create_access_token
+from app.utils.image_handling import ImageHandler
 from app.utils.link_generation import create_user_links, generate_pagination_links
 from app.dependencies import get_settings
 from app.services.email_service import EmailService
@@ -248,16 +249,52 @@ async def verify_email(user_id: UUID, token: str, db: AsyncSession = Depends(get
 
 
 @router.post("/profile-picture/{user_id}", status_code=status.HTTP_200_OK, name="upload_profile_picture", tags=["Profile Management"])
+async def get_profile_picture(user_id: UUID, image: UploadFile, db: AsyncSession = Depends(get_db)):
+    """
+    User uploaded images for their profile picture
+    - **user_id**: UUID of the user to verify.
+    - **image**: Image to be the new profile picture.
+    """
+    if image.content_type != "image/jpeg" and image.content_type != "image/png" and image.content_type != "image/gif":
+        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=f"Does not accept file type: {image.content_type}")
+    
+    # temporarily store image
+    try:
+        with open(f"tmp/{user_id}.png", "wb") as f:
+            f.write(await image.read())
+            f.close()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Unknown issue with image handling: {e}")
+    
+    uploaded = ImageHandler.upload_file(f"tmp/{user_id}.png", f"{user_id}.png") # Upload image to MinIO
+    
+    if not uploaded:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Image upload service failure. Try again later or contact an admin.")
+    else:
+        return {"Successfully uploaded image"}
+
+
+@router.post("/profile-picture/{user_id}", status_code=status.HTTP_200_OK, name="upload_profile_picture", tags=["Profile Management"])
 async def upload_profile_picture(user_id: UUID, image: UploadFile, db: AsyncSession = Depends(get_db)):
     """
     User uploaded images for their profile picture
     - **user_id**: UUID of the user to verify.
     - **image**: Image to be the new profile picture.
     """
-
     if image.content_type != "image/jpeg" and image.content_type != "image/png" and image.content_type != "image/gif":
         raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=f"Does not accept file type: {image.content_type}")
-
-    # TODO Add profile picture upload process
-
-    return {"message": "Image uploaded successfully"}
+    
+    # temporarily store image
+    try:
+        with open(f"tmp/{user_id}.png", "wb") as f:
+            f.write(await image.read())
+            f.close()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Unknown issue with image handling: {e}")
+    
+    uploaded = ImageHandler.upload_file(f"tmp/{user_id}.png", f"{user_id}.png") # Upload image to MinIO
+    
+    if not uploaded:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Image upload service failure. Try again later or contact an admin.")
+    else:
+        return {"Successfully uploaded image"}
