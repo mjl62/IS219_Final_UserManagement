@@ -4,6 +4,11 @@ import io
 from fastapi import UploadFile
 from app.utils.image_handling import ImageHandler
 
+try:
+    os.mkdir("tmp")
+except Exception as e:
+    print("./tmp/ already exists")
+
 @pytest.mark.asyncio
 def test_image_upload():
     assert ImageHandler.upload_file("tests/testing_files/BlankAvatar.png", "test_image.png")
