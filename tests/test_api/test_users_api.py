@@ -214,4 +214,24 @@ async def test_upload_bad_image_type(async_client, verified_user, user_token):
     )
     assert response.status_code == 415
 
+@pytest.mark.asyncio
+async def test_get_profile_picture(async_client, verified_user, user_token):
+    response = await async_client.get(
+            f"/profile-picture/{verified_user.id}",
+            headers={"Authorization": f"Bearer {user_token}"}
+    )
+    assert response.status_code == 200
 
+@pytest.mark.asyncio
+async def test_get_default_profile_picture(async_client):
+    response = await async_client.get(
+        f"/profile-picture/aaaaaa0a-0000-00a0-aa00-0000a000a00a")
+    assert response.status_code == 200 # UUID that doesn't return an image should return the default image
+
+@pytest.mark.asyncio
+async def test_delete_profile_pic(async_client, verified_user, user_token):
+    response = await async_client.delete(
+        f"/profile-picture/{verified_user.id}",
+        headers={"Authorization": f"Bearer {user_token}"}
+    )
+    assert response.status_code == 204
