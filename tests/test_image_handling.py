@@ -19,4 +19,8 @@ def test_tmp_image_delete():
         f.write(b"test")
         f.close;
     assert ImageHandler.delete_temp_file("test.png")
-    
+
+@pytest.mark.asyncio
+def test_delete_all_tmp():
+    success = ImageHandler.delete_all_temp_files()
+    assert success

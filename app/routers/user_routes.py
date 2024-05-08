@@ -23,6 +23,7 @@ from datetime import timedelta
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Response, status, Request, UploadFile
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies import get_current_user, get_db, get_email_service, require_role
 from app.schemas.pagination_schema import EnhancedPagination
@@ -249,32 +250,20 @@ async def verify_email(user_id: UUID, token: str, db: AsyncSession = Depends(get
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification token")
 
 
-@router.post("/profile-picture/{user_id}", status_code=status.HTTP_200_OK, name="upload_profile_picture", tags=["Profile Management"])
-async def get_profile_picture(user_id: UUID, image: UploadFile, db: AsyncSession = Depends(get_db)):
+@router.get("/profile-picture/{user_id}", status_code=status.HTTP_200_OK, name="get_profile_picture", tags=["Profile Management"])
+async def get_profile_picture(user_id: UUID, db: AsyncSession = Depends(get_db)):
     """
-    User uploaded images for their profile picture
+    Get images of profile pictures
     - **user_id**: UUID of the user to verify.
     - **image**: Image to be the new profile picture.
     """
-    if image.content_type != "image/jpeg" and image.content_type != "image/png" and image.content_type != "image/gif":
-        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=f"Does not accept file type: {image.content_type}")
-    
-    # temporarily store image
-    try:
-        with open(f"tmp/{user_id}.png", "wb") as f:
-            f.write(await image.read())
-            f.close()
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Unknown issue with image handling: {e}")
-    
-    uploaded = ImageHandler.upload_file(f"tmp/{user_id}.png", f"{user_id}.png") # Upload image to MinIO
-    
+    file = ImageHandler.fetch_file(f"{user_id}.png")
 
-
-    if not uploaded:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Image upload service failure. Try again later or contact an admin.")
+    # If we cant find profile pic, return default one
+    if not file:
+        return FileResponse(f"app/images/userdefault.png", status_code=status.HTTP_200_OK)
     else:
-        return {"Successfully uploaded image"}
+        return FileResponse(f"tmp/{user_id}.png", status_code=status.HTTP_200_OK)
 
 
 @router.post("/profile-picture/{user_id}", status_code=status.HTTP_200_OK, name="upload_profile_picture", tags=["Profile Management"])
@@ -288,16 +277,44 @@ async def upload_profile_picture(user_id: UUID, image: UploadFile, db: AsyncSess
         raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=f"Does not accept file type: {image.content_type}")
         
     # temporarily store image
-    tmp = ImageHandler.save_temp_file(image=image, filename=f"{user_id}.png")
+    tmp = await ImageHandler.save_temp_file(image=image, filename=f"{user_id}.png")
 
     if not tmp:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Issue with image handling.")
     
-    uploaded = ImageHandler.upload_file(f"tmp/{tmp}", tmp) # Upload image to MinIO
+    uploaded = ImageHandler.upload_file(f"{tmp}", f"{user_id}.png") # Upload image to MinIO
     
-    ImageHandler.delete_temp_file(f"{user_id}.png")
+    await ImageHandler.delete_temp_file(f"{user_id}.png")
 
     if not uploaded:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Image upload service failure. Try again later or contact an admin.")
     else:
         return {"Successfully uploaded image"}
+
+
+@router.delete("/profile-picture/{user_id}", status_code=status.HTTP_204_NO_CONTENT, name="get_profile_picture", tags=["Profile Management"])
+async def get_profile_picture(user_id: UUID, db: AsyncSession = Depends(get_db)):
+    """
+    Get images of profile pictures
+    - **user_id**: UUID of the user to verify.
+    - **image**: Image to be the new profile picture.
+    """
+    deleted = ImageHandler.delete_file(f"{user_id}.png")
+
+    # If we cant find profile pic, return default one
+    if not deleted:
+        return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to delete, does the user have a profile picture?")
+    else:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.delete("/profile-pictures/tmp", status_code=status.HTTP_204_NO_CONTENT, name="delete_all_tmp", tags=["User Management Requires (Admin or Manager Roles)"])
+async def delete_all_tmp(db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme), current_user: dict = Depends(require_role(["ADMIN", "MANAGER"]))):
+    """
+    Clear the tmp folder of images
+    (CAN CAUSE ISSUES IF OTHER REQUESTS ARE BEING PERFORMED)
+    """
+    success = await ImageHandler.delete_all_temp_files()
+    if not success:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to clear, does ./tmp exist?")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
